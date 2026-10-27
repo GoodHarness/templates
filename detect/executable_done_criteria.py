@@ -39,20 +39,30 @@ SKIP_DIRS = {".git", "node_modules", ".venv", "venv", "dist", "build", ".next",
 # way as copilot-instructions.md.
 CONTEXT_NAMES = {"AGENTS.md", "CLAUDE.md", "CLAUDE.local.md"}
 
-# The catalog's pattern, verbatim.
+# Word edges for tool names, so `tsconfig`, `vitest.config.ts` or
+# `@vitest-isolate` don't count as commands.
+L = r"(?<![\w@./-])"
+R = r"(?![\w.-])"
+
+# The catalog's pattern, with word edges added.
 CATALOG_RE = re.compile(
-    r"pytest|go test|cargo (?:test|clippy)|(?:npm|pnpm|yarn) (?:run )?(?:test|lint|typecheck|build)"
-    r"|tsc|ruff|mypy|eslint")
+    rf"{L}(?:pytest|go test|cargo (?:test|clippy)|(?:npm|pnpm|yarn) (?:run )?(?:test|lint|typecheck|build)"
+    rf"|tsc|ruff|mypy|eslint){R}")
 
 # Additions to the catalog's pattern, reported separately so the result says
 # which rule matched. Each is a common runnable verify command the catalog
 # pattern misses.
 EXTENDED_RE = re.compile(
-    r"manage\.py test"                                       # Django
-    r"|turbo (?:run )?(?:test|lint|typecheck|build|check)"    # Turborepo
-    r"|(?:npm|pnpm|yarn|bun) (?:run )?(?:check|verify|ci)\b"  # common script names
-    r"|bun test|vitest|jest|make (?:test|check|lint|verify)\b"
-    r"|go vet|cargo (?:check|fmt)|tox\b|nox\b")
+    rf"{L}(?:manage\.py test{R}"                                  # Django
+    rf"|turbo (?:run )?(?:test|lint|typecheck|build|check){R}"     # Turborepo
+    rf"|(?:npm|pnpm|yarn|bun) (?:run )?(?:check|verify|ci)"        # common script names
+    rf"|bun test{R}|vitest{R}|jest{R}|make (?:test|check|lint|verify){R}"
+    rf"|go vet{R}|cargo (?:check|fmt){R}|tox{R}|nox{R})")
+
+# Binaries a package manager runs from node_modules, and the package that
+# ships each one.
+TOOL_PACKAGES = {"tsc": "typescript", "eslint": "eslint", "vitest": "vitest",
+                 "jest": "jest", "prettier": "prettier"}
 
 # A whole command, so its script or target name can be resolved.
 PKG_SCRIPT_RE = re.compile(
@@ -166,7 +176,14 @@ def resolve(cmd: str, ctx: Path, root: Path, all_pkg: list[Path]) -> tuple[bool,
             scripts = load_package_json(p).get("scripts") or {}
             if script in scripts:
                 return True, f"{p.relative_to(root).as_posix()} script `{script}`"
-        # `npm test` and `yarn test` are built-in aliases for the `test` script.
+        # `yarn tsc` and similar run a binary from a dependency, not a script.
+        if script in TOOL_PACKAGES:
+            dep = TOOL_PACKAGES[script]
+            for p in pkgs:
+                data = load_package_json(p)
+                deps = {**(data.get("dependencies") or {}), **(data.get("devDependencies") or {})}
+                if dep in deps:
+                    return True, f"{p.relative_to(root).as_posix()} depends on `{dep}` (binary `{script}`)"
         return False, f"script `{script}` not in package.json between {folder.relative_to(root).as_posix() or '.'} and the root"
 
     m = MAKE_RE.search(cmd)
@@ -214,12 +231,24 @@ def resolve(cmd: str, ctx: Path, root: Path, all_pkg: list[Path]) -> tuple[bool,
     return False, "no rule to resolve this command"
 
 
-def command_at(line: str, start: int) -> str:
-    """The command around a match: inside backticks if any, else the rest of the line."""
+def command_at(line: str, start: int, fenced: bool) -> str | None:
+    """The command around a match, or None when the match is prose.
+
+    A command is text inside inline backticks, or a line inside a fenced code
+    block (its trailing `# comment` removed). Tool names mentioned in prose
+    ("we use ruff") are not runnable commands and don't count.
+    """
     for m in re.finditer(r"`([^`]+)`", line):
         if m.start() <= start < m.end():
             return m.group(1).strip()
-    return line[start:].strip().rstrip(".,;:)")
+    if fenced:
+        cmd = line.strip()
+        cmd = re.sub(r"^\$\s*", "", cmd)
+        cmd = re.split(r"\s+#\s", cmd, maxsplit=1)[0]
+        if cmd.startswith(("//", "#")) or re.search(r"[├└│─]", cmd):
+            return None  # comments and directory trees, not commands
+        return cmd.strip()
+    return None
 
 
 def check(root: Path) -> dict:
@@ -232,12 +261,16 @@ def check(root: Path) -> dict:
             lines = c.read_text(encoding="utf-8", errors="replace").splitlines()
         except OSError:
             continue
+        fenced = False
         for no, line in enumerate(lines, 1):
+            if line.lstrip().startswith(("```", "~~~")):
+                fenced = not fenced
+                continue
             seen = set()
             for rule, rx in (("catalog", CATALOG_RE), ("extended", EXTENDED_RE)):
                 for m in rx.finditer(line):
-                    cmd = command_at(line, m.start())
-                    if cmd in seen:
+                    cmd = command_at(line, m.start(), fenced)
+                    if cmd is None or cmd in seen:
                         continue
                     seen.add(cmd)
                     ok, where = resolve(cmd, c, root, all_pkg)

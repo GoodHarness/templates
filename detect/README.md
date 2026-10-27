@@ -23,11 +23,11 @@ This script follows the Detection section of the pattern file.
   - `AGENTS.md`, `CLAUDE.md` and `CLAUDE.local.md`, at any depth;
   - `.github/copilot-instructions.md` and `.github/instructions/*.instructions.md`;
   - `.cursor/rules/*.mdc`.
-- **Verify commands:** two rules are applied, and each match says which rule found it.
-  - `catalog` is the pattern file's own pattern.
+- **Verify commands:** only text inside inline backticks or a fenced code block counts. A tool named in prose ("we use ruff") is not a runnable command. Two rules are applied, and each match says which rule found it.
+  - `catalog` is the pattern file's own pattern, with word edges added so `tsconfig` or `vitest.config.ts` don't count.
   - `extended` adds common commands it misses: `manage.py test`, `turbo run test`, `vitest`, `jest`, `make test` and similar.
 - **Resolves:**
-  - an npm, pnpm, yarn or bun script is found in a `package.json` between the context file's folder and the repo root;
+  - an npm, pnpm, yarn or bun script is found in a `package.json` between the context file's folder and the repo root, or the name is a tool binary such as `tsc` and its package is a dependency;
   - a turbo task is found in `turbo.json`;
   - a make target is found in a `Makefile`;
   - pytest, ruff or mypy appears in `pyproject.toml`;
