@@ -2,7 +2,7 @@
 
 Claude Code's background agents send requests you never typed. While an agent works, Claude Code sends its transcript to the model on a timer to write the status line. This check shows those requests on your own machine.
 
-Why this matters, what we saw, and a dated verdict: [What your agent sends when you're not watching](%%NEWSLETTER_URL%%).
+Why this matters, what we saw, and a dated verdict: [What your agent sends when you're not watching](https://buttondown.com/goodharness/archive/background-agents/).
 
 ## What you need
 
