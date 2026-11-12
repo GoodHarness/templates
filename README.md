@@ -9,6 +9,7 @@ Our rule is "measured, not guessed": every pattern carries an evidence grade, an
 | Folder | Contents |
 | --- | --- |
 | `patterns/` | The pattern catalog: one file per harness pattern, with problem, context, trade-offs, solution, per-agent setup, detection check, evidence and grade |
+| `detect/` | Read-only scripts that check a repo for one catalog pattern, starting with 01 · Executable Done-Criteria |
 
 Templates per stack and eval scripts will be added as the series goes on.
 
