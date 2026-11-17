@@ -1,0 +1,21 @@
+# ---- Coding agents: personal / machine-local files. Never commit. ----
+# Claude Code: personal project settings and saved "don't ask again" approvals.
+# Claude Code adds this to your GLOBAL git excludes only on the machine that wrote it.
+**/.claude/settings.local.json
+# Claude Code: personal project memory (not ignored automatically)
+**/CLAUDE.local.md
+# GitHub Copilot CLI: personal repo overrides (docs: add to .gitignore)
+.github/copilot/settings.local.json
+# OpenAI Codex: credential file, only present if CODEX_HOME points inside the repo
+**/.codex/auth.json
+# Env files referenced by MCP envFile (Cursor, VS Code) - Good Harness addition, not vendor text
+.env
+.env.*
+!.env.example
+
+# ---- Shared, intended to be committed. Keep them secret-free and reference secrets as variables. ----
+# .claude/settings.json  .claude/rules/  .claude/skills/  .claude/agents/  CLAUDE.md  .mcp.json (${VAR})
+# .cursor/permissions.json  .cursor/mcp.json (${env:NAME})  .cursor/skills/
+# .codex/config.toml  .codex/rules/  AGENTS.md
+# .github/copilot/settings.json  .github/copilot-instructions.md  .github/mcp.json
+# .vscode/mcp.json (${input:id} / ${env:VAR})
