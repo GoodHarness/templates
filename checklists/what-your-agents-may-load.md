@@ -1,7 +1,7 @@
 # What your agents may load
 
 A checklist for teams that let coding agents start MCP servers and editor extensions.
-It's Recommended practice from the Good Harness field notes of 23 Nov 2026 (%%NEWSLETTER_URL%%).
+It's Recommended practice from the Good Harness field notes of 23 Nov 2026 (https://buttondown.com/goodharness/archive/tools-changed-after-approval/).
 Good Harness hasn't measured it. Every value below is a dummy.
 
 - [ ] List every MCP server and extension your agents load, from `.mcp.json`, `.cursor/mcp.json`, `.vscode/mcp.json`, `.codex/config.toml` and `~/.copilot/mcp-config.json`.
